@@ -9,6 +9,10 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"text/template"
+	"time"
+
+	"golang.org/x/sync/errgroup"
 )
 
 type node string
@@ -39,8 +43,13 @@ type dep struct {
 	target string
 }
 
+type namedDep struct {
+	name string
+	dep
+}
+
 type depGraph interface {
-	addDep(name string, d *dep)
+	addDep(name string, d dep)
 	addFree(name string)
 	next() node
 }
@@ -81,7 +90,7 @@ func (t *hashDepGraph) next() (n node) {
 	return
 }
 
-func (t *hashDepGraph) addDep(name string, d *dep) {
+func (t *hashDepGraph) addDep(name string, d dep) {
 	switch d.rel {
 	case depBefore:
 		t.addEdge(node(name), node(d.target))
@@ -184,12 +193,49 @@ func matchEach(scanner *bufio.Scanner, re *regexp.Regexp, each func([]string) bo
 	return scanner.Err()
 }
 
-func extractDeps(T depGraph, root string) (err error) {
-	return filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+func extractDeps(T depGraph, root string) (time.Time, error) {
+	const bufSize = 10
+	var eg errgroup.Group
+
+	deps := make(chan namedDep, bufSize)
+	free := make(chan string, bufSize)
+	mtimes := make(chan time.Time, bufSize)
+
+	done := make(chan time.Time)
+
+	go func(deps <-chan namedDep, free <-chan string, mtimes <-chan time.Time) {
+		var mtime time.Time
+		for deps != nil && free != nil && mtimes != nil {
+			select {
+			case nd, ok := <-deps:
+				if !ok {
+					deps = nil
+					continue
+				}
+				T.addDep(nd.name, nd.dep)
+			case name, ok := <-free:
+				if !ok {
+					free = nil
+					continue
+				}
+				T.addFree(name)
+			case mt, ok := <-mtimes:
+				if !ok {
+					mtimes = nil
+					continue
+				}
+				if mt.After(mtime) {
+					mtime = mt
+				}
+			}
+		}
+		done <- mtime
+	}(deps, free, mtimes)
+
+	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-
 		if info.IsDir() {
 			return nil
 		}
@@ -202,23 +248,122 @@ func extractDeps(T depGraph, root string) (err error) {
 			return nil
 		}
 
-		f, err := os.Open(path)
-		any := false
-		if err == nil {
+		eg.Go(func() error {
+			st, err := os.Stat(path)
+			if err != nil {
+				return err
+			}
+			mtimes <- st.ModTime()
+
+			f, err := os.Open(path)
+			if err != nil {
+				return err
+			}
+			any := false
 			err = extractDepsFrom(f, func(d dep) {
-				T.addDep(name, &d)
+				deps <- namedDep{name, d}
 				any = true
 			})
-			if cerr := f.Close(); cerr != nil {
+			if cerr := f.Close(); err == nil {
 				err = cerr
 			}
-		}
-		if !any {
-			T.addFree(name)
-		}
+			if err == nil && !any {
+				free <- name
+			}
+			return err
+		})
 
-		return err
+		return nil
 	})
+
+	if gerr := eg.Wait(); err == nil {
+		err = gerr
+	}
+	close(deps)
+	close(free)
+	close(mtimes)
+	mtime := <-done
+	return mtime, err
+}
+
+var (
+	out   = flag.String("out", "", "")
+	timed = flag.Bool("timed", false, "")
+)
+
+var defaultTemplate = template.Must(template.New("defaultTemplate").Parse(`
+{{ define "before" }}
+# START {{ .Name }}
+# from {{ .Path }}
+{{ end }}
+
+{{ define "after" }}
+# END {{ .Name }}
+{{ end }}
+`))
+
+var timedTemplate = template.Must(template.New("timedTemplate").Parse(`
+{{ define "before" }}
+# START {{ .Name }}
+# from {{ .Path }}
+{ echo -n {{ .Name }}; time (
+{{ end }}
+
+{{ define "after" }}
+) }
+# END {{ .Name }}
+{{ end }}
+`))
+
+type depCompiler struct {
+	tmpl     *template.Template
+	notFirst bool
+	w        io.Writer
+	d        struct {
+		Name, Path string
+	}
+}
+
+func (dc depCompiler) compile(root string, T *hashDepGraph) error {
+	for n := T.next(); len(n) != 0; n = T.next() {
+		dc.d.Name = string(n)
+		dc.d.Path = filepath.Join(root, dc.d.Name)
+		f, err := os.Open(dc.d.Path)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return err
+		}
+		err = dc.compDep(f)
+		if err == nil {
+			err = f.Close()
+		}
+		if err != nil {
+			return err
+		}
+	}
+	if len(T.g) > 0 {
+		return fmt.Errorf("dependency cycle detected: %q", T.g)
+	}
+	return nil
+}
+
+func (dc depCompiler) compDep(r io.Reader) error {
+	if dc.notFirst {
+		if _, err := io.WriteString(dc.w, "\n"); err != nil {
+			return err
+		}
+	} else {
+		dc.notFirst = true
+	}
+	if err := dc.tmpl.ExecuteTemplate(dc.w, "before", dc.d); err != nil {
+		return err
+	}
+	if _, err := io.Copy(dc.w, r); err != nil {
+		return err
+	}
+	return dc.tmpl.ExecuteTemplate(dc.w, "after", dc.d)
 }
 
 func main() {
@@ -239,23 +384,44 @@ func main() {
 	}
 
 	T := newHashDepGraph()
-	if err = extractDeps(T, root); err != nil {
+	mtime, err := extractDeps(T, root)
+	if err != nil {
 		log.Fatal(err)
 	}
 
-	for n := T.next(); len(n) != 0; n = T.next() {
-		p := filepath.Join(root, string(n))
-		if _, err := os.Stat(p); err != nil {
-			if os.IsNotExist(err) {
-				continue
-			}
-			log.Fatal(err)
-		}
-		fmt.Fprintln(os.Stdout, p)
+	dc := depCompiler{
+		tmpl: defaultTemplate,
+		w:    os.Stdout,
 	}
 
-	if len(T.g) > 0 {
-		fmt.Println(T.g)
-		log.Fatal("dependency cycle detected")
+	if *out != "" {
+		var f *os.File
+		if err := func() error {
+			st, err := os.Stat(*out)
+			if err == nil {
+				if mt := st.ModTime(); mt.After(mtime) {
+					os.Exit(0)
+				}
+			} else if !os.IsNotExist(err) {
+				return err
+			}
+			f, err = os.Create(*out)
+			return err
+		}(); err != nil {
+			log.Fatal(err)
+		}
+
+		defer func() {
+			_ = f.Close()
+		}()
+		dc.w = f
+	}
+
+	if *timed {
+		dc.tmpl = timedTemplate
+	}
+
+	if err := dc.compile(root, T); err != nil {
+		log.Fatal(err)
 	}
 }
