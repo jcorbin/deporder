@@ -84,6 +84,9 @@ func (t *hashDepGraph) next() (n node) {
 
 func (t *hashDepGraph) add(name string, ds ...dep) {
 	n := node(name)
+
+	// If we have no deps, and this is the first time that we've seen the node,
+	// then add it to the free set.
 	if len(ds) == 0 {
 		_, inG := t.g[n]
 		_, inH := t.h[n]
@@ -93,6 +96,8 @@ func (t *hashDepGraph) add(name string, ds ...dep) {
 		return
 	}
 
+	// Otherwise we have a node with some dependency relations: ensure un-free
+	// it and add new edges.
 	delete(t.f, n)
 	for _, d := range ds {
 		a, b := n, node(d.target)
