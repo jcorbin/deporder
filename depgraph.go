@@ -74,7 +74,7 @@ func newHashDepGraph() *hashDepGraph {
 func (t *hashDepGraph) next() (n node) {
 	if len(t.n) > 0 {
 		n = t.n.min()
-		t.removeNode(n)
+		t.remove(n)
 		return
 	}
 	n = t.f.min()
@@ -116,7 +116,7 @@ func (t *hashDepGraph) add(name string, ds ...dep) {
 	}
 }
 
-func (t *hashDepGraph) removeNode(a node) {
+func (t *hashDepGraph) remove(a node) {
 	ga := t.g[a]
 
 	delete(t.f, a)
