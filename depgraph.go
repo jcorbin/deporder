@@ -84,7 +84,14 @@ func (t *hashDepGraph) next() (n node) {
 
 func (t *hashDepGraph) add(name string, ds ...dep) {
 	if len(ds) == 0 {
-		t.addFree(name)
+		n := node(name)
+		if _, inG := t.g[n]; inG {
+			return
+		}
+		if _, inH := t.h[n]; inH {
+			return
+		}
+		t.f[n] = struct{}{}
 		return
 	}
 	for _, d := range ds {
@@ -99,17 +106,6 @@ func (t *hashDepGraph) addDep(name string, d dep) {
 	case depAfter:
 		t.addEdge(node(d.target), node(name))
 	}
-}
-
-func (t *hashDepGraph) addFree(name string) {
-	n := node(name)
-	if _, inG := t.g[n]; inG {
-		return
-	}
-	if _, inH := t.h[n]; inH {
-		return
-	}
-	t.f[n] = struct{}{}
 }
 
 func (t *hashDepGraph) addEdge(a, b node) {
