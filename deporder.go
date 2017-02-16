@@ -80,13 +80,13 @@ func extractDeps(T depGraph, root string) (time.Time, error) {
 					deps = nil
 					continue
 				}
-				T.addDep(nd.name, nd.dep)
+				T.add(nd.name, nd.dep)
 			case name, ok := <-free:
 				if !ok {
 					free = nil
 					continue
 				}
-				T.addFree(name)
+				T.add(name)
 			case mt, ok := <-mtimes:
 				if !ok {
 					mtimes = nil

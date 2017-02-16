@@ -1,8 +1,7 @@
 package main
 
 type depGraph interface {
-	addDep(name string, d dep)
-	addFree(name string)
+	add(name string, ds ...dep)
 	next() node
 }
 
@@ -81,6 +80,16 @@ func (t *hashDepGraph) next() (n node) {
 	n = t.f.min()
 	delete(t.f, n)
 	return
+}
+
+func (t *hashDepGraph) add(name string, ds ...dep) {
+	if len(ds) == 0 {
+		t.addFree(name)
+		return
+	}
+	for _, d := range ds {
+		t.addDep(name, d)
+	}
 }
 
 func (t *hashDepGraph) addDep(name string, d dep) {
