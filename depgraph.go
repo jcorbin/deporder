@@ -104,18 +104,14 @@ func (t *hashDepGraph) addFree(name string) {
 }
 
 func (t *hashDepGraph) addEdge(a, b node) {
-	if _, inF := t.f[a]; inF {
-		delete(t.f, a)
-	}
-	if _, inF := t.f[b]; inF {
-		delete(t.f, b)
-	}
+	delete(t.f, a)
+	delete(t.f, b)
 	t.g.addEdge(a, b)
 	t.h.addEdge(b, a)
 	delete(t.n, b)
 	if _, ok := t.h[a]; !ok {
 		t.n[a] = struct{}{}
-	} else if _, inN := t.n[a]; inN {
+	} else {
 		delete(t.n, a)
 	}
 }
