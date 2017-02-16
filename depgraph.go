@@ -64,12 +64,12 @@ type hashDepGraph struct {
 }
 
 func newHashDepGraph() *hashDepGraph {
-	T := new(hashDepGraph)
-	T.n = make(nodeSet)
-	T.f = make(nodeSet)
-	T.g = make(graph)
-	T.h = make(graph)
-	return T
+	return &hashDepGraph{
+		n: make(nodeSet),
+		f: make(nodeSet),
+		g: make(graph),
+		h: make(graph),
+	}
 }
 
 func (t *hashDepGraph) next() (n node) {
