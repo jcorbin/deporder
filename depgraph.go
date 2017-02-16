@@ -1,7 +1,7 @@
 package main
 
 type depGraph interface {
-	add(name string, ds ...dep)
+	add(name node, ds ...dep)
 	next() node
 }
 
@@ -54,7 +54,7 @@ func (g graph) addEdge(a, b node) {
 
 type dep struct {
 	rel    depType
-	target string
+	target node
 }
 
 type hashDepGraph struct {
@@ -82,9 +82,7 @@ func (t *hashDepGraph) next() (n node) {
 	return
 }
 
-func (t *hashDepGraph) add(name string, ds ...dep) {
-	n := node(name)
-
+func (t *hashDepGraph) add(n node, ds ...dep) {
 	// If we have no deps, and this is the first time that we've seen the node,
 	// then add it to the free set.
 	if len(ds) == 0 {
@@ -100,7 +98,7 @@ func (t *hashDepGraph) add(name string, ds ...dep) {
 	// it and add new edges.
 	delete(t.f, n)
 	for _, d := range ds {
-		a, b := n, node(d.target)
+		a, b := n, d.target
 		delete(t.f, b)
 		if d.rel == depAfter {
 			a, b = b, a

@@ -19,7 +19,7 @@ var rDepLine = regexp.MustCompile(`^\s*#\s*(?:(before)|(after)):\s+(.+?)\s*$`)
 
 func extractDepsFrom(r io.Reader, eachDep func(dep)) error {
 	return extractHeadMatchesFrom(r, rDepLine, func(match []string) {
-		d := dep{target: match[3]}
+		d := dep{target: node(match[3])}
 		if len(match[1]) != 0 {
 			d.rel = depBefore
 		} else if len(match[2]) != 0 {
@@ -80,13 +80,13 @@ func extractDeps(T depGraph, root string) (time.Time, error) {
 					deps = nil
 					continue
 				}
-				T.add(nd.name, nd.dep)
+				T.add(node(nd.name), nd.dep)
 			case name, ok := <-free:
 				if !ok {
 					free = nil
 					continue
 				}
-				T.add(name)
+				T.add(node(name))
 			case mt, ok := <-mtimes:
 				if !ok {
 					mtimes = nil
