@@ -93,9 +93,9 @@ func (t *hashDepGraph) add(name string, ds ...dep) {
 		return
 	}
 
+	delete(t.f, n)
 	for _, d := range ds {
 		a, b := n, node(d.target)
-		delete(t.f, a)
 		delete(t.f, b)
 		if d.rel == depAfter {
 			a, b = b, a
