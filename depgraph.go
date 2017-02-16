@@ -101,20 +101,16 @@ func (t *hashDepGraph) add(name string, ds ...dep) {
 		case depAfter:
 			a, b = node(d.target), n
 		}
-		t.addEdge(a, b)
-	}
-}
-
-func (t *hashDepGraph) addEdge(a, b node) {
-	delete(t.f, a)
-	delete(t.f, b)
-	t.g.addEdge(a, b)
-	t.h.addEdge(b, a)
-	delete(t.n, b)
-	if _, ok := t.h[a]; !ok {
-		t.n[a] = struct{}{}
-	} else {
-		delete(t.n, a)
+		delete(t.f, a)
+		delete(t.f, b)
+		t.g.addEdge(a, b)
+		t.h.addEdge(b, a)
+		delete(t.n, b)
+		if _, ok := t.h[a]; !ok {
+			t.n[a] = struct{}{}
+		} else {
+			delete(t.n, a)
+		}
 	}
 }
 
