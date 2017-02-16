@@ -7,6 +7,17 @@ const (
 	depAfter
 )
 
+func (dt depType) String() string {
+	switch dt {
+	case depBefore:
+		return "before"
+	case depAfter:
+		return "after"
+	default:
+		return "InvalidDepType"
+	}
+}
+
 type node string
 type edges []node
 type nodeSet map[node]struct{}
