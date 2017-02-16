@@ -85,10 +85,12 @@ func (t *hashDepGraph) next() (n node) {
 func (t *hashDepGraph) add(name string, ds ...dep) {
 	n := node(name)
 	if len(ds) == 0 {
-		if _, inG := t.g[n]; inG {
+		_, inG := t.g[n]
+		_, inH := t.h[n]
+		if inG {
 			return
 		}
-		if _, inH := t.h[n]; inH {
+		if inH {
 			return
 		}
 		t.f[n] = struct{}{}
