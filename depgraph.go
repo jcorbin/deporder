@@ -83,8 +83,8 @@ func (t *hashDepGraph) next() (n node) {
 }
 
 func (t *hashDepGraph) add(name string, ds ...dep) {
+	n := node(name)
 	if len(ds) == 0 {
-		n := node(name)
 		if _, inG := t.g[n]; inG {
 			return
 		}
@@ -98,9 +98,9 @@ func (t *hashDepGraph) add(name string, ds ...dep) {
 	for _, d := range ds {
 		switch d.rel {
 		case depBefore:
-			t.addEdge(node(name), node(d.target))
+			t.addEdge(n, node(d.target))
 		case depAfter:
-			t.addEdge(node(d.target), node(name))
+			t.addEdge(node(d.target), n)
 		}
 	}
 }
