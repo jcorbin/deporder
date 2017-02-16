@@ -95,11 +95,11 @@ func (t *hashDepGraph) add(name string, ds ...dep) {
 
 	for _, d := range ds {
 		a, b := n, node(d.target)
+		delete(t.f, a)
+		delete(t.f, b)
 		if d.rel == depAfter {
 			a, b = b, a
 		}
-		delete(t.f, a)
-		delete(t.f, b)
 		t.g.addEdge(a, b)
 		t.h.addEdge(b, a)
 		delete(t.n, b)
