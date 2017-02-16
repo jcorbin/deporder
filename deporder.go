@@ -60,33 +60,26 @@ func extractDeps(T *depGraph, root string) (time.Time, error) {
 	const bufSize = 10
 	var eg errgroup.Group
 
-	type namedDep struct {
+	type namedDeps struct {
 		name string
-		dep
+		ds   []dep
 	}
 
-	deps := make(chan namedDep, bufSize)
-	free := make(chan string, bufSize)
+	deps := make(chan namedDeps, bufSize)
 	mtimes := make(chan time.Time, bufSize)
 
 	done := make(chan time.Time)
 
-	go func(deps <-chan namedDep, free <-chan string, mtimes <-chan time.Time) {
+	go func(deps <-chan namedDep, mtimes <-chan time.Time) {
 		var mtime time.Time
-		for deps != nil && free != nil && mtimes != nil {
+		for deps != nil && mtimes != nil {
 			select {
 			case nd, ok := <-deps:
 				if !ok {
 					deps = nil
 					continue
 				}
-				T.add(node(nd.name), nd.dep)
-			case name, ok := <-free:
-				if !ok {
-					free = nil
-					continue
-				}
-				T.add(node(name))
+				T.add(node(nd.name), nd.ds...)
 			case mt, ok := <-mtimes:
 				if !ok {
 					mtimes = nil
@@ -98,7 +91,7 @@ func extractDeps(T *depGraph, root string) (time.Time, error) {
 			}
 		}
 		done <- mtime
-	}(deps, free, mtimes)
+	}(deps, mtimes)
 
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -127,16 +120,17 @@ func extractDeps(T *depGraph, root string) (time.Time, error) {
 			if err != nil {
 				return err
 			}
-			any := false
+			dep := namedDeps{
+				name: name,
+			}
 			err = extractDepsFrom(f, func(d dep) {
-				deps <- namedDep{name, d}
-				any = true
+				dep.ds = append(dep.ds, d)
 			})
 			if cerr := f.Close(); err == nil {
 				err = cerr
 			}
-			if err == nil && !any {
-				free <- name
+			if err == nil {
+				deps <- dep
 			}
 			return err
 		})
@@ -148,7 +142,6 @@ func extractDeps(T *depGraph, root string) (time.Time, error) {
 		err = gerr
 	}
 	close(deps)
-	close(free)
 	close(mtimes)
 	mtime := <-done
 	return mtime, err
