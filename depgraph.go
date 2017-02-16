@@ -94,17 +94,14 @@ func (t *hashDepGraph) add(name string, ds ...dep) {
 		t.f[n] = struct{}{}
 		return
 	}
-	for _, d := range ds {
-		t.addDep(name, d)
-	}
-}
 
-func (t *hashDepGraph) addDep(name string, d dep) {
-	switch d.rel {
-	case depBefore:
-		t.addEdge(node(name), node(d.target))
-	case depAfter:
-		t.addEdge(node(d.target), node(name))
+	for _, d := range ds {
+		switch d.rel {
+		case depBefore:
+			t.addEdge(node(name), node(d.target))
+		case depAfter:
+			t.addEdge(node(d.target), node(name))
+		}
 	}
 }
 
