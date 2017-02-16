@@ -62,7 +62,7 @@ func extractDeps(T *depGraph, root string) (time.Time, error) {
 
 	type namedDeps struct {
 		mtime time.Time
-		name  string
+		name  node
 		ds    []dep
 	}
 
@@ -72,7 +72,7 @@ func extractDeps(T *depGraph, root string) (time.Time, error) {
 	go func() {
 		var mtime time.Time
 		for dep := range deps {
-			T.add(node(dep.name), dep.ds...)
+			T.add(dep.name, dep.ds...)
 			if dep.mtime.After(mtime) {
 				mtime = dep.mtime
 			}
@@ -108,7 +108,7 @@ func extractDeps(T *depGraph, root string) (time.Time, error) {
 			}
 			dep := namedDeps{
 				mtime: st.ModTime(),
-				name:  name,
+				name:  node(name),
 			}
 			err = extractDepsFrom(f, func(d dep) {
 				dep.ds = append(dep.ds, d)
