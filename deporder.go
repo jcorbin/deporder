@@ -56,7 +56,7 @@ func matchEach(scanner *bufio.Scanner, re *regexp.Regexp, each func([]string) bo
 	return scanner.Err()
 }
 
-func extractDeps(T depGraph, root string) (time.Time, error) {
+func extractDeps(T *depGraph, root string) (time.Time, error) {
 	const bufSize = 10
 	var eg errgroup.Group
 
@@ -192,7 +192,7 @@ type depCompiler struct {
 	}
 }
 
-func (dc depCompiler) compile(root string, T *hashDepGraph) error {
+func (dc depCompiler) compile(root string, T *depGraph) error {
 	for n := T.next(); len(n) != 0; n = T.next() {
 		dc.d.Name = string(n)
 		dc.d.Path = filepath.Join(root, dc.d.Name)
@@ -251,7 +251,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	T := newHashDepGraph()
+	T := newDepGraph()
 	mtime, err := extractDeps(T, root)
 	if err != nil {
 		log.Fatal(err)

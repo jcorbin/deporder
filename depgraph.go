@@ -1,10 +1,5 @@
 package main
 
-type depGraph interface {
-	add(name node, ds ...dep)
-	next() node
-}
-
 type depType uint8
 
 const (
@@ -57,13 +52,13 @@ type dep struct {
 	target node
 }
 
-type hashDepGraph struct {
+type depGraph struct {
 	n, f nodeSet
 	g, h graph
 }
 
-func newHashDepGraph() *hashDepGraph {
-	return &hashDepGraph{
+func newDepGraph() *depGraph {
+	return &depGraph{
 		n: make(nodeSet),
 		f: make(nodeSet),
 		g: make(graph),
@@ -71,7 +66,7 @@ func newHashDepGraph() *hashDepGraph {
 	}
 }
 
-func (t *hashDepGraph) next() (n node) {
+func (t *depGraph) next() (n node) {
 	if len(t.n) > 0 {
 		n = t.n.min()
 		t.remove(n)
@@ -82,7 +77,7 @@ func (t *hashDepGraph) next() (n node) {
 	return
 }
 
-func (t *hashDepGraph) add(n node, ds ...dep) {
+func (t *depGraph) add(n node, ds ...dep) {
 	// If we have no deps, and this is the first time that we've seen the node,
 	// then add it to the free set.
 	if len(ds) == 0 {
@@ -114,7 +109,7 @@ func (t *hashDepGraph) add(n node, ds ...dep) {
 	}
 }
 
-func (t *hashDepGraph) remove(a node) {
+func (t *depGraph) remove(a node) {
 	ga := t.g[a]
 
 	delete(t.f, a)
