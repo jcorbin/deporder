@@ -19,9 +19,9 @@ func (dt depType) String() string {
 }
 
 type node string
-type edges []node
+type nodes []node
 type nodeSet map[node]struct{}
-type graph map[node]edges
+type graph map[node]nodes
 
 type dep struct {
 	rel    depType
@@ -42,7 +42,7 @@ type hashDepGraph struct {
 func (g graph) addEdge(a, b node) {
 	ga, ok := g[a]
 	if !ok {
-		ga = make(edges, 1)
+		ga = make(nodes, 1)
 		ga[0] = b
 	} else {
 		ga = append(ga, b)
