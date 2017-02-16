@@ -94,12 +94,9 @@ func (t *hashDepGraph) add(name string, ds ...dep) {
 	}
 
 	for _, d := range ds {
-		var a, b node
-		switch d.rel {
-		case depBefore:
-			a, b = n, node(d.target)
-		case depAfter:
-			a, b = node(d.target), n
+		a, b := n, node(d.target)
+		if d.rel == depAfter {
+			a, b = b, a
 		}
 		delete(t.f, a)
 		delete(t.f, b)
