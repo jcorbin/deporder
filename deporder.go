@@ -69,23 +69,16 @@ func extractDeps(T *depGraph, root string) (time.Time, error) {
 	deps := make(chan namedDeps, bufSize)
 	done := make(chan time.Time)
 
-	go func(deps <-chan namedDep) {
+	go func() {
 		var mtime time.Time
-		for deps != nil {
-			select {
-			case nd, ok := <-deps:
-				if !ok {
-					deps = nil
-					continue
-				}
-				T.add(node(nd.name), nd.ds...)
-				if nd.mtime.After(mtime) {
-					mtime = nd.mtime
-				}
+		for dep := range deps {
+			T.add(node(dep.name), dep.ds...)
+			if dep.mtime.After(mtime) {
+				mtime = dep.mtime
 			}
 		}
 		done <- mtime
-	}(deps)
+	}()
 
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
