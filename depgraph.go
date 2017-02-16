@@ -89,9 +89,10 @@ func (t *hashDepGraph) add(name string, ds ...dep) {
 		_, inH := t.h[n]
 		if inG || inH {
 			return
+		} else {
+			t.f[n] = struct{}{}
+			return
 		}
-		t.f[n] = struct{}{}
-		return
 	}
 
 	for _, d := range ds {
