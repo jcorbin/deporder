@@ -1,5 +1,11 @@
 package main
 
+type depGraph interface {
+	addDep(name string, d dep)
+	addFree(name string)
+	next() node
+}
+
 type depType uint8
 
 const (
@@ -20,24 +26,21 @@ func (dt depType) String() string {
 
 type node string
 type nodes []node
+
 type nodeSet map[node]struct{}
+
+func (ns nodeSet) min() (n node) {
+	for in := range ns {
+		if len(n) == 0 {
+			n = in
+		} else if in < n {
+			n = in
+		}
+	}
+	return
+}
+
 type graph map[node]nodes
-
-type dep struct {
-	rel    depType
-	target string
-}
-
-type depGraph interface {
-	addDep(name string, d dep)
-	addFree(name string)
-	next() node
-}
-
-type hashDepGraph struct {
-	n, f nodeSet
-	g, h graph
-}
 
 func (g graph) addEdge(a, b node) {
 	ga, ok := g[a]
@@ -50,6 +53,16 @@ func (g graph) addEdge(a, b node) {
 	g[a] = ga
 }
 
+type dep struct {
+	rel    depType
+	target string
+}
+
+type hashDepGraph struct {
+	n, f nodeSet
+	g, h graph
+}
+
 func newHashDepGraph() *hashDepGraph {
 	T := new(hashDepGraph)
 	T.n = make(nodeSet)
@@ -57,17 +70,6 @@ func newHashDepGraph() *hashDepGraph {
 	T.g = make(graph)
 	T.h = make(graph)
 	return T
-}
-
-func (ns nodeSet) min() (n node) {
-	for in := range ns {
-		if len(n) == 0 {
-			n = in
-		} else if in < n {
-			n = in
-		}
-	}
-	return
 }
 
 func (t *hashDepGraph) next() (n node) {
