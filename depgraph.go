@@ -89,7 +89,6 @@ func (t *hashDepGraph) add(name string, ds ...dep) {
 		_, inH := t.h[n]
 		if !(inG || inH) {
 			t.f[n] = struct{}{}
-			return
 		}
 		return
 	}
