@@ -28,11 +28,6 @@ type dep struct {
 	target string
 }
 
-type namedDep struct {
-	name string
-	dep
-}
-
 type depGraph interface {
 	addDep(name string, d dep)
 	addFree(name string)

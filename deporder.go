@@ -60,6 +60,11 @@ func extractDeps(T depGraph, root string) (time.Time, error) {
 	const bufSize = 10
 	var eg errgroup.Group
 
+	type namedDep struct {
+		name string
+		dep
+	}
+
 	deps := make(chan namedDep, bufSize)
 	free := make(chan string, bufSize)
 	mtimes := make(chan time.Time, bufSize)
