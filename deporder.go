@@ -129,8 +129,7 @@ func extractDeps(T *depGraph, root string) (time.Time, error) {
 		err = gerr
 	}
 	close(deps)
-	mtime := <-done
-	return mtime, err
+	return <-done, err
 }
 
 var (
