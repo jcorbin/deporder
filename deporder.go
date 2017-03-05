@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
 	"io"
@@ -29,37 +28,11 @@ func extractDepsFrom(r io.Reader, eachDep func(dep)) error {
 	})
 }
 
-func extractHeadMatchesFrom(r io.Reader, re *regexp.Regexp, each func([]string)) error {
-	matching := false
-	scanner := bufio.NewScanner(r)
-	return matchEach(scanner, re, func(match []string) bool {
-		if match != nil {
-			matching = true
-			each(match)
-			return false
-		} else if matching {
-			return true
-		} else {
-			return false
-		}
-	})
-}
-
-func matchEach(scanner *bufio.Scanner, re *regexp.Regexp, each func([]string) bool) error {
-	for scanner.Scan() {
-		line := scanner.Text()
-		match := re.FindStringSubmatch(line)
-		if each(match) {
-			break
-		}
-	}
-	return scanner.Err()
-}
-
 func extractDeps(T *depGraph, root string) (time.Time, error) {
 	const bufSize = 10
 	var eg errgroup.Group
 
+	// XXX weird name (the dep isn't named, it's just a name + a dep)
 	type namedDeps struct {
 		mtime time.Time
 		name  node

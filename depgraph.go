@@ -53,8 +53,14 @@ type dep struct {
 }
 
 type depGraph struct {
-	n, f nodeSet
-	g, h graph
+	// the set of root dependency nodes
+	n nodeSet
+	// free nodes
+	f nodeSet
+	// graph of dependencies
+	g graph
+	// its co-graph (aka dependants)
+	h graph
 }
 
 func newDepGraph() *depGraph {
@@ -66,6 +72,8 @@ func newDepGraph() *depGraph {
 	}
 }
 
+// next removes and returns the lexicographically least root dependency or free
+// node once all dependencies have been traversed.
 func (t *depGraph) next() (n node) {
 	if len(t.n) > 0 {
 		n = t.n.min()
@@ -77,6 +85,7 @@ func (t *depGraph) next() (n node) {
 	return
 }
 
+// add adds a node with zero or more dependency relations to the graph.
 func (t *depGraph) add(n node, ds ...dep) {
 	// If we have no deps, and this is the first time that we've seen the node,
 	// then add it to the free set.
@@ -102,13 +111,19 @@ func (t *depGraph) add(n node, ds ...dep) {
 		t.h.addEdge(b, a)
 		delete(t.n, b)
 		if _, ok := t.h[a]; !ok {
+			// if a has no dependencies, then it's a root node (so far); put it
+			// into n so that next will get to it
 			t.n[a] = struct{}{}
 		} else {
+			// a has some dependencies, and we'll get to it after next has
+			// processed all of a's dependencies.
 			delete(t.n, a)
 		}
 	}
 }
 
+// remove removes a dependency from the graph, adding adds all dependants
+// that have no more dependencies to the root node set.
 func (t *depGraph) remove(a node) {
 	ga := t.g[a]
 
